@@ -1,0 +1,6 @@
+#ifndef BUILDPROP_H
+#define BUILDPROP_H
+
+#define APPLICATION_BUILD_PATH "${CMAKE_CURRENT_SOURCE_DIR}"
+
+#endif
