@@ -9,10 +9,4 @@
     sleep_ms(x); \
     tight_loop_contents()
 
-void counter_overflow();
-
-void gps_rx();
-
-void gps_pps_callback(uint gpio, uint32_t event_mask);
-
 #endif

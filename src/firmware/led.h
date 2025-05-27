@@ -9,8 +9,12 @@ enum led_t {
     LED_EMBEDDED
 };
 
+typedef enum led_t led;
+
 void led_init();
 
-void led_set_state(enum led_t led, bool state);
+void led_set_state(led l, bool state);
+
+const char *led_to_string(led l);
 
 #endif

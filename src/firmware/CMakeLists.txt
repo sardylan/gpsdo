@@ -4,20 +4,22 @@ configure_file(version.h.in version.h)
 
 add_executable(gpsdo
         config.h
+        counter.h counter.c
         gps.h gps.c
         led.h led.c
         log.h log.c
         main.h main.c
-        oscillator.h oscillator.c
-        si5351.h si5351.c)
+        oscillator.h oscillator.c)
 
 target_link_libraries(gpsdo
         pico_stdlib
         pico_multicore
+        hardware_gpio
         hardware_uart
         hardware_rtc
         hardware_pwm
         hardware_irq
-        hardware_i2c)
+        hardware_i2c
+        si5351)
 
 pico_add_extra_outputs(gpsdo)

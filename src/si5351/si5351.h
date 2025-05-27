@@ -33,13 +33,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
 #include <stdio.h>
 #include <math.h>
-#include "pico/stdlib.h"
-#include "hardware/i2c.h"
-#include "hardware/timer.h"
-#include "hardware/clocks.h"
+#include <stdlib.h>
+
+#include <hardware/i2c.h>
+#include <hardware/timer.h>
+#include <hardware/clocks.h>
 
 /* Define definitions */
 

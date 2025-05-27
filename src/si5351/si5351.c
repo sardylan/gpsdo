@@ -28,6 +28,8 @@
 
 #include <stdint.h>
 
+#include <hardware/gpio.h>
+
 struct Si5351Status dev_status = {0, 0, 0, 0, 0};
 struct Si5351IntStatus dev_int_status = {0, 0, 0, 0};
 

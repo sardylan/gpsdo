@@ -1,52 +1,479 @@
 #include "gps.h"
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "log.h"
+#include "counter.h"
+#include "led.h"
+#include "hardware/rtc.h"
+#include "pico/critical_section.h"
 
 char gps_buffer[GPS_CHUNKS][GPS_CHUNK_SIZE];
-size_t gps_buffer_head;
-size_t gps_buffer_head_pos;
-size_t gps_buffer_tail;
+volatile bool gps_in_sentence;
+volatile size_t gps_buffer_head;
+volatile size_t gps_buffer_head_pos;
+volatile size_t gps_buffer_tail;
+
+volatile bool gps_event_pps;
+volatile bool gps_event_nmea;
+
+double latitude;
+double longitude;
+gps_fix fix;
+unsigned int satellites;
+float hdop;
+float altitude;
+float geoid_separation;
+
+critical_section_t gps_cs;
 
 void gps_init() {
     log_info("Initialization");
 
+    log_debug("Initializing critical section");
+    critical_section_init(&gps_cs);
+
+    log_debug("Resetting buffers");
     memset(gps_buffer, '\0', sizeof(gps_buffer));
+    gps_in_sentence = false;
     gps_buffer_head = 0;
     gps_buffer_head_pos = 0;
     gps_buffer_tail = 0;
+
+    log_debug("Resetting data");
+    latitude = 0;
+    longitude = 0;
+    fix = GPS_FIX_INVALID;
+    satellites = 0;
+    hdop = 0;
+    altitude = 0;
+    geoid_separation = 0;
+
+    log_debug("Configuring UART interrupt");
+    irq_set_exclusive_handler(GPS_UART_IRQ, gps_rx);
+    irq_set_enabled(GPS_UART_IRQ, true);
+
+    log_debug("Configuring UART port");
+    uart_init(GPS_UART, GPS_UART_SPEED);
+    gpio_set_function(GPS_UART_PIN_TX, UART_FUNCSEL_NUM(GPS_UART, GPS_UART_PIN_TX));
+    gpio_set_function(GPS_UART_PIN_RX, UART_FUNCSEL_NUM(GPS_UART, GPS_UART_PIN_RX));
+    uart_set_hw_flow(GPS_UART, false, false);
+    uart_set_format(GPS_UART, GPS_UART_DATA_BITS, GPS_UART_STOP_BITS, GPS_UART_PARITY);
+    uart_set_fifo_enabled(GPS_UART, true);
+    uart_set_irq_enables(GPS_UART, true, false);
+
+    log_debug("Configuring GPIO pin for PPS");
+    gpio_init(GPS_PIN_PPS);
+    gpio_set_dir(GPS_PIN_PPS, GPIO_IN);
+
+    log_debug("Configuring GPIO interrupt for PPS");
+    gpio_set_irq_enabled_with_callback(GPS_PIN_PPS, GPIO_IRQ_EDGE_RISE, true, gps_pps_callback);
 }
 
 const char *gps_head_get() {
-    return gps_buffer[gps_buffer_head];
+    critical_section_enter_blocking(&gps_cs);
+    const char *string = gps_buffer[gps_buffer_head];
+    critical_section_exit(&gps_cs);
+    return string;
 }
 
 void gps_head_put(const char c) {
+    critical_section_enter_blocking(&gps_cs);
+
     gps_buffer[gps_buffer_head][gps_buffer_head_pos] = c;
     gps_buffer_head_pos += 1;
-    if (gps_buffer_head_pos >= 1024) {
+    if (gps_buffer_head_pos >= GPS_CHUNK_SIZE) {
         gps_buffer_head_pos = 0;
-        memset(gps_buffer[gps_buffer_head], '\0', 1024);
+        memset(gps_buffer[gps_buffer_head], '\0', GPS_CHUNK_SIZE);
     }
+
+    critical_section_exit(&gps_cs);
 }
 
 void gps_head_forward() {
+    critical_section_enter_blocking(&gps_cs);
+
     gps_buffer_head += 1;
-    if (gps_buffer_head >= 32)
+    if (gps_buffer_head >= GPS_CHUNKS)
         gps_buffer_head = 0;
 
     gps_buffer_head_pos = 0;
+
+    critical_section_exit(&gps_cs);
 }
 
 const char *gps_tail_get() {
-    return gps_buffer[gps_buffer_tail];
+    critical_section_enter_blocking(&gps_cs);
+    const char *string = gps_buffer[gps_buffer_tail];
+    critical_section_exit(&gps_cs);
+    return string;
 }
 
 void gps_tail_forward() {
-    memset(gps_buffer[gps_buffer_tail], '\0', 1024);
+    critical_section_enter_blocking(&gps_cs);
+
+    memset(gps_buffer[gps_buffer_tail], '\0', GPS_CHUNK_SIZE);
     gps_buffer_tail += 1;
-    if (gps_buffer_tail >= 32)
+    if (gps_buffer_tail >= GPS_CHUNKS)
         gps_buffer_tail = 0;
+
+    critical_section_exit(&gps_cs);
+}
+
+bool gps_event_get(const gps_event event) {
+    switch (event) {
+        case GPS_EVENT_PPS:
+            return gps_event_pps;
+        case GPS_EVENT_NMEA:
+            return gps_event_nmea;
+        default:
+            return false;
+    }
+}
+
+void gps_event_reset(const gps_event event) {
+    switch (event) {
+        case GPS_EVENT_NMEA:
+            gps_event_nmea = false;
+            break;
+        case GPS_EVENT_PPS:
+            gps_event_pps = false;
+            break;
+    }
+}
+
+void gps_rx() {
+    while (uart_is_readable(GPS_UART)) {
+        const char ch = uart_getc(GPS_UART);
+
+        if (!gps_in_sentence) {
+            if (ch == '$') {
+                gps_in_sentence = true;
+                gps_buffer_head_pos = 0;
+                gps_head_put(ch);
+            }
+            continue;
+        }
+
+        if (ch == '\n' || ch == '\r') {
+            led_set_state(LED_GPS_DATA, true);
+            gps_head_forward();
+
+            gps_buffer_head_pos = 0;
+            gps_in_sentence = false;
+
+            gps_event_nmea = true;
+
+            continue;
+        }
+
+        gps_head_put(ch);
+    }
+}
+
+void gps_pps_callback(uint gpio, uint32_t event_mask) {
+    if (gpio != GPS_PIN_PPS)
+        return;
+    if (!(event_mask & GPIO_IRQ_EDGE_RISE))
+        return;
+
+    counter_read();
+
+    led_set_state(LED_GPS_PPS, true);
+    gps_event_pps = true;
+}
+
+void gps_sentence_parse(const char *s) {
+    char sentence[GPS_CHUNK_SIZE];
+    char *saveptr;
+
+    log_info("Parsing NMEA sentence");
+
+    log_debug("Copying sentence");
+    strncpy(sentence, s, GPS_CHUNK_SIZE);
+
+    log_debug("Checking if string is a valid NMEA sentence");
+    if (strncmp(sentence, "$GP", 3) != 0) {
+        log_warn("Invalid NMEA sentence: %s", sentence);
+        return;
+    }
+
+    if (strncmp(sentence + 3, "GGA", 3) == 0) {
+        log_debug("GGA sentence");
+
+        char buf[4];
+
+        const char *item = strtok_r(sentence + 6, ",", &saveptr);
+        size_t item_num = 0;
+        while (item != nullptr) {
+            log_trace("Item %zu: %s", item_num, item);
+            switch (item_num) {
+                case 1: {
+                    if (strlen(item) == 0)
+                        continue;
+                    buf[0] = item[0];
+                    buf[1] = item[1];
+                    buf[2] = '\0';
+                    latitude = strtod(buf, nullptr);
+                    latitude += strtod(item + 2, nullptr) / 60.0;
+                }
+                break;
+
+                case 2: {
+                    if (*item == 'S')
+                        latitude *= -1;
+                }
+                break;
+
+                case 3: {
+                    if (strlen(item) == 0)
+                        continue;
+                    buf[0] = item[0];
+                    buf[1] = item[1];
+                    buf[2] = item[2];
+                    buf[3] = '\0';
+                    longitude = strtod(buf, nullptr);
+                    longitude += strtod(item + 2, nullptr) / 60.0;
+                }
+                break;
+
+                case 4: {
+                    if (*item == 'W')
+                        longitude *= -1;
+                }
+                break;
+
+                case 5: {
+                    switch (*item) {
+                        case '1':
+                            fix = GPS_FIX_SPS;
+                            break;
+                        case '2':
+                            fix = GPS_FIX_DIFFERENTIAL;
+                            break;
+                        case '6':
+                            fix = GPS_FIX_DEAD_RECKONING;
+                            break;
+                        default:
+                            fix = GPS_FIX_INVALID;
+                            break;
+                    }
+                }
+                break;
+
+                case 6: {
+                    if (strlen(item) == 0)
+                        continue;
+                    satellites = strtoul(item, nullptr, 10);
+                }
+                break;
+
+                case 7: {
+                    if (strlen(item) == 0)
+                        continue;
+                    hdop = (float) strtod(item, nullptr);
+                }
+                break;
+
+                case 8: {
+                    if (strlen(item) == 0)
+                        continue;
+                    altitude = (float) strtod(item, nullptr);
+                }
+                break;
+
+                case 10: {
+                    if (strlen(item) == 0)
+                        continue;
+                    geoid_separation = (float) strtod(item, nullptr);
+                }
+                break;
+
+                default:
+                    break;
+            }
+
+            item = strtok_r(nullptr, ",", &saveptr);
+            item_num++;
+        }
+
+        log_trace(
+            "GGA (Fix: %s - Lat: %.06f - Long: %.06f - Alt: %.01f - Sats: %d - HDoP: %.02f - Geoid separation: %.02f)",
+            gps_fix_to_string(fix), latitude, longitude, altitude, satellites, hdop, geoid_separation);
+
+        switch (fix) {
+            case GPS_FIX_SPS:
+            case GPS_FIX_DIFFERENTIAL:
+            case GPS_FIX_DEAD_RECKONING:
+                led_set_state(LED_GPS_FIX, true);
+                break;
+
+            default:
+                led_set_state(LED_GPS_FIX, false);
+        }
+    }
+
+    if (strncmp(sentence + 3, "RMC", 3) == 0) {
+        log_debug("RMC sentence");
+
+        bool valid = false;
+
+        datetime_t dt;
+        dt.year = 0;
+        dt.month = 0;
+        dt.day = 0;
+        dt.hour = 0;
+        dt.min = 0;
+        dt.sec = 0;
+
+        float speed = 0;
+        float course = 0;
+
+        const char *item = strtok_r(sentence + 6, ",", &saveptr);
+        size_t item_num = 0;
+        while (item != nullptr) {
+            log_trace("Item %zu: %s", item_num, item);
+
+            char buf[4];
+
+            switch (item_num) {
+                case 0: {
+                    if (strlen(item) == 0)
+                        continue;
+
+                    buf[0] = item[0];
+                    buf[1] = item[1];
+                    buf[2] = '\0';
+                    dt.hour = (int8_t) strtoul(buf, nullptr, 10);
+
+                    buf[0] = item[2];
+                    buf[1] = item[3];
+                    buf[2] = '\0';
+                    dt.min = (int8_t) strtoul(buf, nullptr, 10);
+
+                    buf[0] = item[4];
+                    buf[1] = item[5];
+                    buf[2] = '\0';
+                    dt.sec = (int8_t) strtoul(buf, nullptr, 10);
+                }
+                break;
+
+                case 1: {
+                    if (strlen(item) == 0)
+                        continue;
+
+                    valid = item[0] == 'A';
+                }
+                break;
+
+                case 6: {
+                    if (strlen(item) == 0)
+                        continue;
+
+                    speed = (float) strtod(item, nullptr);;
+                }
+                break;
+
+                case 7: {
+                    if (strlen(item) == 0)
+                        continue;
+
+                    course = (float) strtod(item, nullptr);;
+                }
+                break;
+
+                case 8: {
+                    if (strlen(item) == 0)
+                        continue;
+
+                    buf[0] = item[0];
+                    buf[1] = item[1];
+                    buf[2] = '\0';
+                    dt.day = (int8_t) strtoul(buf, nullptr, 10);
+
+                    buf[0] = item[2];
+                    buf[1] = item[3];
+                    buf[2] = '\0';
+                    dt.month = (int8_t) strtoul(buf, nullptr, 10);
+
+                    buf[0] = item[4];
+                    buf[1] = item[5];
+                    buf[2] = '\0';
+                    dt.year = (int16_t) (2000 + strtoul(buf, nullptr, 10));
+                }
+                break;
+
+                default:
+                    break;
+            }
+
+            item = strtok_r(nullptr, ",", &saveptr);
+            item_num++;
+        }
+
+        log_trace("RMC (Valid: %s - Time: %04d-%02d-%02d %02d:%02d:%02d)",
+                  valid ? "YES" : "NO", dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
+
+        rtc_set_datetime(&dt);
+
+        led_set_state(LED_CLOCK_SYNC, valid);
+    }
+}
+
+const char *gps_fix_to_string(const gps_fix fix) {
+    switch (fix) {
+        case GPS_FIX_SPS:
+            return "SPS";
+        case GPS_FIX_DIFFERENTIAL:
+            return "Differential";
+        case GPS_FIX_DEAD_RECKONING:
+            return "Dead Reckoning";
+        default:
+            return "INVALID";
+    }
+}
+
+uint8_t gps_nmea_checksum_compute(const char *s) {
+    uint8_t checksum = 0;
+
+    while (*s && *s != '*') {
+        checksum ^= (uint8_t) (*s);
+        s++;
+    }
+
+    return checksum;
+}
+
+bool gps_nmea_checksum_validate(const char *s) {
+    log_info("Validating NMEA checksum");
+
+    if (s == nullptr || *s != '$') {
+        log_warn("Empty or invalid start of NMEA sentence");
+        return false;
+    }
+
+    const char *asterisk = strchr(s, '*');
+    if (!asterisk || (asterisk - s) < 1) {
+        log_warn("No '*' found in NMEA sentence: %s", s);
+        return false;
+    }
+
+    uint8_t computed_checksum = 0;
+    for (const char *p = s + 1; p < asterisk; ++p)
+        computed_checksum ^= (uint8_t) *p;
+
+    if (*(asterisk + 1) == '\0' || *(asterisk + 2) == '\0') {
+        log_warn("Incomplete checksum digits in sentence: %s", s);
+        return false;
+    }
+
+    const char hex[3] = {asterisk[1], asterisk[2], '\0'};
+    const uint8_t expected_checksum = (uint8_t) strtoul(hex, nullptr, 16);
+
+    log_trace("Expected checksum: %02X", expected_checksum);
+    log_trace("Computed checksum: %02X", computed_checksum);
+
+    return computed_checksum == expected_checksum;
 }
