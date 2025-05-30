@@ -29,7 +29,6 @@ void log_message_impl(const char *file, const size_t line, const char *level, co
     va_list args;
     datetime_t now;
 
-    // rtc_get_datetime(&now);
     timertc_get_time(&now);
     snprintf(datetime, sizeof(datetime), "%04d-%02d-%02d %02d:%02d:%02d",
              now.year, now.month, now.day, now.hour, now.min, now.sec);

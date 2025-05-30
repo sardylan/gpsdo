@@ -86,6 +86,4 @@ void job_core1() {
     }
 
     led_blink_check();
-
-    // sleep_ms(333);
 }
