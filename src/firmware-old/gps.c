@@ -5,9 +5,8 @@
 #include <string.h>
 
 #include "log.h"
-// #include "counter.h"
+#include "counter.h"
 #include "led.h"
-#include "timertc.h"
 #include "hardware/rtc.h"
 #include "pico/critical_section.h"
 
@@ -73,6 +72,7 @@ void gps_init() {
     log_gps(debug, "Configuring GPIO interrupt for PPS");
     gpio_set_irq_enabled_with_callback(GPS_PIN_PPS, GPIO_IRQ_EDGE_RISE, true, gps_pps_callback);
     irq_set_priority(GPIO_IRQ_EDGE_RISE, 1);
+
 }
 
 const char *gps_head_get() {
@@ -161,6 +161,7 @@ void gps_rx() {
         }
 
         if (ch == '\n' || ch == '\r') {
+            led_set_state(LED_GPS_DATA, true);
             gps_head_forward();
 
             gps_buffer_head_pos = 0;
@@ -181,8 +182,9 @@ void gps_pps_callback(uint gpio, uint32_t event_mask) {
     if (!(event_mask & GPIO_IRQ_EDGE_RISE))
         return;
 
-    // counter_read();
+    counter_read();
 
+    led_set_state(LED_GPS_PPS, true);
     gps_event_pps = true;
 }
 
@@ -300,9 +302,9 @@ void gps_sentence_parse(const char *s) {
             item_num++;
         }
 
-        log_gps(trace,
-                "GGA (Fix: %s - Lat: %.06f - Long: %.06f - Alt: %.01f - Sats: %d - HDoP: %.02f - Geoid separation: %.02f)",
-                gps_fix_to_string(fix), latitude, longitude, altitude, satellites, hdop, geoid_separation);
+        log_gps(trace, 
+            "GGA (Fix: %s - Lat: %.06f - Long: %.06f - Alt: %.01f - Sats: %d - HDoP: %.02f - Geoid separation: %.02f)",
+            gps_fix_to_string(fix), latitude, longitude, altitude, satellites, hdop, geoid_separation);
 
         switch (fix) {
             case GPS_FIX_SPS:
@@ -415,9 +417,11 @@ void gps_sentence_parse(const char *s) {
         }
 
         log_gps(trace, "RMC (Valid: %s - Time: %04d-%02d-%02d %02d:%02d:%02d)",
-                valid ? "YES" : "NO", dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
+                  valid ? "YES" : "NO", dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
 
-        timertc_set_time(&dt);
+        rtc_set_datetime(&dt);
+
+        led_set_state(LED_CLOCK_SYNC, valid);
     }
 }
 

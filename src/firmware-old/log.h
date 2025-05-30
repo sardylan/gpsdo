@@ -1,5 +1,5 @@
-#ifndef GPSDO__FIRMWARE__LOG__H
-#define GPSDO__FIRMWARE__LOG__H
+#ifndef LOG_H
+#define LOG_H
 
 #include <stdarg.h>
 #include <stdio.h>

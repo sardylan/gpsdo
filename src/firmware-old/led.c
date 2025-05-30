@@ -1,16 +1,12 @@
 #include "led.h"
 
-#include "log.h"
+#include <hardware/gpio.h>
 
-uint64_t led_blink_gps_data_time;
-uint64_t led_blink_gps_pps_time;
+#include "config.h"
+#include "log.h"
 
 void led_init() {
     log_info("Initialization");
-
-    log_led(debug, "Initializing variables");
-    led_blink_gps_data_time = 0;
-    led_blink_gps_pps_time = 0;
 
     log_led(debug, "Initializing GPIO for GPS data LED");
     gpio_init(LED_PIN_GPS_DATA);
@@ -69,31 +65,4 @@ const char *led_to_string(const led l) {
         default:
             return "Unknown";
     }
-}
-
-void led_blink(const led l) {
-    switch (l) {
-        case LED_GPS_DATA: {
-            led_set_state(LED_GPS_DATA, true);
-            led_blink_gps_data_time = time_us_64();
-        }
-        break;
-        case LED_GPS_PPS: {
-            led_set_state(LED_GPS_PPS, true);
-            led_blink_gps_pps_time = time_us_64();
-        }
-        break;
-        default:
-            break;
-    }
-}
-
-void led_blink_check() {
-    const uint64_t now = time_us_64();
-
-    if (gpio_get(LED_PIN_GPS_DATA) && now - led_blink_gps_data_time >= LED_BLINK_PERIOD_US)
-        led_set_state(LED_GPS_DATA, false);
-
-    if (gpio_get(LED_PIN_GPS_PPS) && now - led_blink_gps_pps_time >= LED_BLINK_PERIOD_US)
-        led_set_state(LED_GPS_PPS, false);
 }

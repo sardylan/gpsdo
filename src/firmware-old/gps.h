@@ -1,5 +1,5 @@
-#ifndef GPSDO__FIRMWARE__GPS__H
-#define GPSDO__FIRMWARE__GPS__H
+#ifndef GPS_H
+#define GPS_H
 
 #include <stdint.h>
 #include <pico/types.h>

@@ -1,0 +1,10 @@
+#ifndef BUILDFLAGS_H
+#define BUILDFLAGS_H
+
+#cmakedefine LOG_COUNTER_ENABLED
+#cmakedefine LOG_GPS_ENABLED
+#cmakedefine LOG_TIMERTC_ENABLED
+#cmakedefine LOG_LED_ENABLED
+#cmakedefine LOG_OSCILLATOR_ENABLED
+
+#endif

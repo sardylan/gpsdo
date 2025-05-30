@@ -1,12 +1,14 @@
-#ifndef MAIN_H
-#define MAIN_H
+#ifndef GPSDO__FIRMWARE__MAIN__H
+#define GPSDO__FIRMWARE__MAIN__H
 
-#include <stdint.h>
+void init();
 
-#include "pico/types.h"
+void program_core0();
 
-#define loopDelay(x) \
-    sleep_ms(x); \
-    tight_loop_contents()
+void program_core1();
+
+void job_core0();
+
+void job_core1();
 
 #endif

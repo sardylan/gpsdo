@@ -1,7 +1,5 @@
-#ifndef GPSDO__FIRMWARE__LED__H
-#define GPSDO__FIRMWARE__LED__H
-
-#include <stdint.h>
+#ifndef LED_H
+#define LED_H
 
 #include "buildflags.h"
 
@@ -10,8 +8,6 @@
 #else
 #define log_led(level, format, ...)
 #endif
-
-#define LED_BLINK_PERIOD_US 150000
 
 enum led_t {
     LED_GPS_DATA,
@@ -28,9 +24,5 @@ void led_init();
 void led_set_state(led l, bool state);
 
 const char *led_to_string(led l);
-
-void led_blink(led l);
-
-void led_blink_check();
 
 #endif
