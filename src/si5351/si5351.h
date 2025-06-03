@@ -41,7 +41,7 @@
 #include <hardware/timer.h>
 #include <hardware/clocks.h>
 
-/* Define definitions */
+#include <pico/types.h>
 
 #define SI5351_BUS_BASE_ADDR            0x60
 #define SI5351_XTAL_FREQ                25000000
@@ -286,6 +286,17 @@ struct Si5351IntStatus {
     uint8_t LOL_A_STKY;
     uint8_t LOS_STKY;
 };
+
+struct si5351_ctx_t {
+    i2c_inst_t *i2c;
+    uint baudrate;
+    uint sda;
+    uint scl;
+};
+
+typedef struct si5351_ctx_t si5351_ctx;
+
+void si5351_configure(i2c_inst_t *i2c, uint baudrate, uint sda, uint scl);
 
 // Si5351(uint8_t i2c_addr = SI5351_BUS_BASE_ADDR);
 bool si5351_init(uint8_t, uint8_t, uint32_t, int32_t);

@@ -5,8 +5,11 @@
 
 #include <pico/critical_section.h>
 
+#include <hardware/rtc.h>
+#include <hardware/gpio.h>
+#include <hardware/uart.h>
+
 #include "timertc.h"
-#include "hardware/rtc.h"
 
 critical_section_t log_cs;
 

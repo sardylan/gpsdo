@@ -3,7 +3,6 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <hardware/uart.h>
 
 #include "config.h"
 

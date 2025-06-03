@@ -2,8 +2,10 @@
 #define CONFIG_H
 
 #include <pico/stdlib.h>
+
 #include <hardware/uart.h>
 #include <hardware/i2c.h>
+#include <hardware/pio.h>
 
 #define LOG_UART                    uart1
 #define LOG_UART_SPEED              115200
@@ -21,7 +23,11 @@
 #define GPS_UART_STOP_BITS          1
 #define GPS_UART_PARITY             UART_PARITY_NONE
 #define GPS_UART_IRQ                UART0_IRQ
-#define GPS_PIN_PPS                 22
+
+#define COUNTER_PIO                 pio0
+#define COUNTER_STATE_MACHINE       0
+#define COUNTER_PIN_CLOCK           3
+#define COUNTER_PIN_PPS             22
 
 #define OSCILLATOR_I2C              i2c1
 #define OSCILLATOR_I2C_PIN_SDA      19

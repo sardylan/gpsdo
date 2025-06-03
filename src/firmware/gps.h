@@ -5,6 +5,7 @@
 #include <pico/types.h>
 
 #include "buildflags.h"
+#include "log.h"
 
 #ifdef LOG_GPS_ENABLED
 #define log_gps(level, format, ...) log_##level(format, ##__VA_ARGS__)
@@ -16,8 +17,7 @@
 #define GPS_CHUNKS      32
 
 enum gps_event_t {
-    GPS_EVENT_NMEA,
-    GPS_EVENT_PPS,
+    GPS_EVENT_NMEA
 };
 
 typedef enum gps_event_t gps_event;
@@ -48,8 +48,6 @@ bool gps_event_get(gps_event event);
 void gps_event_reset(gps_event event);
 
 void gps_rx();
-
-void gps_pps_callback(uint gpio, uint32_t event_mask);
 
 void gps_sentence_parse(const char *s);
 

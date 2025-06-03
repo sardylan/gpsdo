@@ -17,7 +17,6 @@ volatile size_t gps_buffer_head;
 volatile size_t gps_buffer_head_pos;
 volatile size_t gps_buffer_tail;
 
-volatile bool gps_event_pps;
 volatile bool gps_event_nmea;
 
 double latitude;
@@ -65,14 +64,6 @@ void gps_init() {
     uart_set_format(GPS_UART, GPS_UART_DATA_BITS, GPS_UART_STOP_BITS, GPS_UART_PARITY);
     uart_set_fifo_enabled(GPS_UART, true);
     uart_set_irq_enables(GPS_UART, true, false);
-
-    log_gps(debug, "Configuring GPIO pin for PPS");
-    gpio_init(GPS_PIN_PPS);
-    gpio_set_dir(GPS_PIN_PPS, GPIO_IN);
-
-    log_gps(debug, "Configuring GPIO interrupt for PPS");
-    gpio_set_irq_enabled_with_callback(GPS_PIN_PPS, GPIO_IRQ_EDGE_RISE, true, gps_pps_callback);
-    irq_set_priority(GPIO_IRQ_EDGE_RISE, 1);
 }
 
 const char *gps_head_get() {
@@ -127,8 +118,6 @@ void gps_tail_forward() {
 
 bool gps_event_get(const gps_event event) {
     switch (event) {
-        case GPS_EVENT_PPS:
-            return gps_event_pps;
         case GPS_EVENT_NMEA:
             return gps_event_nmea;
         default:
@@ -141,8 +130,7 @@ void gps_event_reset(const gps_event event) {
         case GPS_EVENT_NMEA:
             gps_event_nmea = false;
             break;
-        case GPS_EVENT_PPS:
-            gps_event_pps = false;
+        default:
             break;
     }
 }
@@ -173,17 +161,6 @@ void gps_rx() {
 
         gps_head_put(ch);
     }
-}
-
-void gps_pps_callback(uint gpio, uint32_t event_mask) {
-    if (gpio != GPS_PIN_PPS)
-        return;
-    if (!(event_mask & GPIO_IRQ_EDGE_RISE))
-        return;
-
-    // counter_read();
-
-    gps_event_pps = true;
 }
 
 void gps_sentence_parse(const char *s) {

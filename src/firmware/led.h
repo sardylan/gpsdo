@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "buildflags.h"
+#include "log.h"
 
 #ifdef LOG_LED_ENABLED
 #define log_led(level, format, ...) log_##level(format, ##__VA_ARGS__)

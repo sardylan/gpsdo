@@ -8,6 +8,8 @@
 #include "log.h"
 #include "timertc.h"
 #include "ui.h"
+#include "counter.h"
+#include "oscillator.h"
 
 int main() {
     init();
@@ -26,6 +28,8 @@ void init() {
     timertc_init();
     led_init();
     gps_init();
+    counter_init();
+    // oscillator_init();
 }
 
 void program_core0() {
@@ -53,23 +57,13 @@ void job_core0() {
 void job_core1() {
     // log_text("Core 1");
 
-    if (gps_event_get(GPS_EVENT_PPS)) {
-        gps_event_reset(GPS_EVENT_PPS);
+    if (counter_event_get(COUNTER_EVENT_PPS)) {
+        counter_event_reset(COUNTER_EVENT_PPS);
 
-        // const int delta = (int) counter_delta();
+        const uint64_t value = counter_get_value();
+        const int delta = (int) (REFERENCE_CLOCK_FREQUENCY - value);
         // const unsigned int module = abs(delta);
-        // log_text("CLOCK: current %llu - delta %d", counter_value(), delta);
-        //
-        // int64_t shift = oscillator_get_shift(OSCILLATOR_CLK_2);
-        //
-        // if (module >= 100000)
-        //     shift += delta;
-        // else if (delta > 0)
-        //     shift += min(500, module);
-        // else if (delta < 0)
-        //     shift -= min(500, module);
-        //
-        // oscillator_set_shift(shift);
+        log_text("CLOCK: current %llu - delta %d", value, delta);
 
         led_blink(LED_GPS_PPS);
     }

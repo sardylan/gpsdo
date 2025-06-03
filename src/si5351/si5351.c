@@ -30,6 +30,8 @@
 
 #include <hardware/gpio.h>
 
+si5351_ctx ctx;
+
 struct Si5351Status dev_status = {0, 0, 0, 0, 0};
 struct Si5351IntStatus dev_int_status = {0, 0, 0, 0};
 
@@ -64,8 +66,8 @@ uint8_t i2c_bus_addr;
 bool clk_first_set[8];
 
 /* I2C0 pins */
-#define I2C0_SDA 12
-#define I2C0_SCL 13
+// #define I2C0_SDA 12
+// #define I2C0_SCL 13
 
 /********************/
 /* Public functions */
@@ -77,6 +79,13 @@ uint32_t do_div(uint64_t *n, const uint32_t base) {
     return remainder;
 }
 
+
+void si5351_configure(i2c_inst_t *i2c, const uint baudrate, const uint sda, const uint scl) {
+    ctx.i2c = i2c;
+    ctx.baudrate = baudrate;
+    ctx.sda = sda;
+    ctx.scl = scl;
+}
 
 /*
  * si5351_init(I2C_HandleTypeDef *hi2c, uint8_t i2c_addr, uint8_t xtal_load_c, uint32_t ref_osc_freq, int32_t corr)
@@ -103,11 +112,11 @@ bool si5351_init(uint8_t i2c_addr, uint8_t xtal_load_c, uint32_t xo_freq, int32_
     pllb_ref_osc = SI5351_PLL_INPUT_XO;
     clkin_div = SI5351_CLKIN_DIV_1;
 
-    i2c_init(i2c0, 400 * 1000);
-    gpio_set_function(I2C0_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(I2C0_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C0_SDA);
-    gpio_pull_up(I2C0_SCL);
+    i2c_init(ctx.i2c, ctx.baudrate);
+    gpio_set_function(ctx.sda, GPIO_FUNC_I2C);
+    gpio_set_function(ctx.scl, GPIO_FUNC_I2C);
+    gpio_pull_up(ctx.sda);
+    gpio_pull_up(ctx.scl);
 
     // Check for a device on the bus, bail out if it is not there
     uint8_t reg_val = 0;
@@ -1598,7 +1607,7 @@ uint8_t si5351_write_bulk(uint8_t regAddr, uint8_t length, uint8_t *data) {
     }
 
     // Write data to register(s) over I2C
-    i2c_write_blocking(i2c0, i2c_bus_addr, msg, (length + 1), false);
+    i2c_write_blocking(ctx.i2c, i2c_bus_addr, msg, (length + 1), false);
 
     return num_bytes_read;
 }
@@ -1612,8 +1621,8 @@ uint8_t si5351_write(uint8_t regAddr, uint8_t data) {
 uint8_t si5351_read(uint8_t regAddr) {
     uint8_t buf;
 
-    i2c_write_blocking(i2c0, i2c_bus_addr, &regAddr, 1, true);
-    i2c_read_blocking(i2c0, i2c_bus_addr, &buf, 1, false);
+    i2c_write_blocking(ctx.i2c, i2c_bus_addr, &regAddr, 1, true);
+    i2c_read_blocking(ctx.i2c, i2c_bus_addr, &buf, 1, false);
 
     return buf;
 }
