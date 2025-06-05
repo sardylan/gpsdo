@@ -11,7 +11,7 @@ add_executable(gpsdo
         led.h led.c
         log.h log.c
         main.h main.c
-#        oscillator.h oscillator.c
+        oscillator.h oscillator.c
         timertc.h timertc.c
         ui.h ui.c
         version.h.in)

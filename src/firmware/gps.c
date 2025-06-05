@@ -394,7 +394,8 @@ void gps_sentence_parse(const char *s) {
         log_gps(trace, "RMC (Valid: %s - Time: %04d-%02d-%02d %02d:%02d:%02d)",
                 valid ? "YES" : "NO", dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
 
-        timertc_set_time(&dt);
+        if (valid)
+            timertc_set_time(&dt);
     }
 }
 

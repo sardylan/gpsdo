@@ -17,8 +17,13 @@ void oscillator_init() {
     log_oscillator(info, "Initializing");
 
     log_oscillator(debug, "Initializing Si5351");
-    si5351_configure(OSCILLATOR_I2C, OSCILLATOR_I2C_BAUDRATE, OSCILLATOR_I2C_PIN_SDA, OSCILLATOR_I2C_PIN_SCL);
-    si5351_init(0x60, SI5351_CRYSTAL_LOAD_10PF, 26000000, 0);
+    si5351_init(OSCILLATOR_I2C_ADDRESS, SI5351_CRYSTAL_LOAD_8PF, OSCILLATOR_I2C_XTAL_FREQUENCY,
+                OSCILLATOR_I2C_XTAL_FREQUENCY_CORRECTION);
+
+    log_oscillator(debug, "Disabling clock powers");
+    si5351_set_clock_pwr(SI5351_CLK0, 0);
+    si5351_set_clock_pwr(SI5351_CLK1, 0);
+    si5351_set_clock_pwr(SI5351_CLK2, 0);
 
     log_oscillator(debug, "Setting drive strength");
     si5351_drive_strength(SI5351_CLK0, SI5351_DRIVE_8MA);
@@ -38,14 +43,20 @@ void oscillator_init() {
 
     log_oscillator(debug, "Updating oscillators");
     oscillator_update();
+}
 
-    log_oscillator(debug, "Setting output enable status");
+void oscillator_start() {
+    log_oscillator(info, "Oscillator start");
+
+    log_oscillator(debug, "Enabling clock power");
+    si5351_set_clock_pwr(SI5351_CLK0, 1);
+    si5351_set_clock_pwr(SI5351_CLK1, 1);
+    si5351_set_clock_pwr(SI5351_CLK2, 1);
+
+    log_oscillator(debug, "Enabling outputs");
     si5351_output_enable(SI5351_CLK0, 1);
     si5351_output_enable(SI5351_CLK1, 1);
     si5351_output_enable(SI5351_CLK2, 1);
-
-    log_oscillator(debug, "Resetting PLL");
-    pll_reset(SI5351_PLLA);
 }
 
 uint64_t oscillator_get_frequency(const oscillator_clk clk) {
@@ -125,8 +136,12 @@ void oscillator_update() {
     const uint64_t freq_2 = oscillator_frequency_2 + oscillator_shift_2;
     log_oscillator(trace, "Frequency CLK2 = %llu", freq_2);
 
+    log_oscillator(debug, "Setting frequencies");
+    log_oscillator(trace, "Setting frequency for clock 0");
     si5351_set_freq(freq_0 * SI5351_FREQ_MULT, SI5351_CLK0);
+    log_oscillator(trace, "Setting frequency for clock 1");
     si5351_set_freq(freq_1 * SI5351_FREQ_MULT, SI5351_CLK1);
+    log_oscillator(trace, "Setting frequency for clock 2");
     si5351_set_freq(freq_2 * SI5351_FREQ_MULT, SI5351_CLK2);
 }
 

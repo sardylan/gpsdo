@@ -33,15 +33,15 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
 #include <stdio.h>
 #include <math.h>
-#include "pico/stdlib.h"
-#include "hardware/i2c.h"
-#include "hardware/timer.h"
-#include "hardware/clocks.h"
+#include <stdlib.h>
 
-/* Define definitions */
+#include <hardware/i2c.h>
+#include <hardware/timer.h>
+#include <hardware/clocks.h>
+
+#include <pico/types.h>
 
 #define SI5351_BUS_BASE_ADDR            0x60
 #define SI5351_XTAL_FREQ                25000000
@@ -217,13 +217,15 @@
  *       beware of side effects!
  */
 
-# define do_div(n,base) ({                                      \
-        uint64_t __base = (base);                               \
-        uint64_t __rem;                                         \
-        __rem = ((uint64_t)(n)) % __base;                       \
-        (n) = ((uint64_t)(n)) / __base;                         \
-        __rem;                                                  \
- })
+// # define do_div(n,base) ({                                      \
+//         uint64_t __base = (base);                               \
+//         uint64_t __rem;                                         \
+//         __rem = ((uint64_t)(n)) % __base;                       \
+//         (n) = ((uint64_t)(n)) / __base;                         \
+//         __rem;                                                  \
+//  })
+
+uint32_t do_div(uint64_t *n, uint32_t base);
 
 /* Enum definitions */
 
@@ -243,73 +245,110 @@ enum si5351_variant {
 };
 */
 
-enum si5351_clock {SI5351_CLK0, SI5351_CLK1, SI5351_CLK2, SI5351_CLK3,
-	SI5351_CLK4, SI5351_CLK5, SI5351_CLK6, SI5351_CLK7};
+enum Clock {
+    SI5351_CLK0, SI5351_CLK1, SI5351_CLK2, SI5351_CLK3,
+    SI5351_CLK4, SI5351_CLK5, SI5351_CLK6, SI5351_CLK7
+};
 
-enum si5351_pll {SI5351_PLLA, SI5351_PLLB};
+enum PLL { SI5351_PLLA, SI5351_PLLB };
 
-enum si5351_drive {SI5351_DRIVE_2MA, SI5351_DRIVE_4MA, SI5351_DRIVE_6MA, SI5351_DRIVE_8MA};
+enum Drive { SI5351_DRIVE_2MA, SI5351_DRIVE_4MA, SI5351_DRIVE_6MA, SI5351_DRIVE_8MA };
 
-enum si5351_clock_source {SI5351_CLK_SRC_XTAL, SI5351_CLK_SRC_CLKIN, SI5351_CLK_SRC_MS0, SI5351_CLK_SRC_MS};
+enum ClockSource { SI5351_CLK_SRC_XTAL, SI5351_CLK_SRC_CLKIN, SI5351_CLK_SRC_MS0, SI5351_CLK_SRC_MS };
 
-enum si5351_clock_disable {SI5351_CLK_DISABLE_LOW, SI5351_CLK_DISABLE_HIGH, SI5351_CLK_DISABLE_HI_Z, SI5351_CLK_DISABLE_NEVER};
+enum ClockDisable {
+    SI5351_CLK_DISABLE_LOW, SI5351_CLK_DISABLE_HIGH, SI5351_CLK_DISABLE_HI_Z, SI5351_CLK_DISABLE_NEVER
+};
 
-enum si5351_clock_fanout {SI5351_FANOUT_CLKIN, SI5351_FANOUT_XO, SI5351_FANOUT_MS};
+enum ClockFanout { SI5351_FANOUT_CLKIN, SI5351_FANOUT_XO, SI5351_FANOUT_MS };
 
-enum si5351_pll_input {SI5351_PLL_INPUT_XO, SI5351_PLL_INPUT_CLKIN};
+enum PLLInput { SI5351_PLL_INPUT_XO, SI5351_PLL_INPUT_CLKIN };
 
 /* Struct definitions */
 
-struct Si5351RegSet
-{
-	uint32_t p1;
-	uint32_t p2;
-	uint32_t p3;
+struct Si5351RegSet {
+    uint32_t p1;
+    uint32_t p2;
+    uint32_t p3;
 };
 
-struct Si5351Status
-{
-	uint8_t SYS_INIT;
-	uint8_t LOL_B;
-	uint8_t LOL_A;
-	uint8_t LOS;
-	uint8_t REVID;
+struct Si5351Status {
+    uint8_t SYS_INIT;
+    uint8_t LOL_B;
+    uint8_t LOL_A;
+    uint8_t LOS;
+    uint8_t REVID;
 };
 
-struct Si5351IntStatus
-{
-	uint8_t SYS_INIT_STKY;
-	uint8_t LOL_B_STKY;
-	uint8_t LOL_A_STKY;
-	uint8_t LOS_STKY;
+struct Si5351IntStatus {
+    uint8_t SYS_INIT_STKY;
+    uint8_t LOL_B_STKY;
+    uint8_t LOL_A_STKY;
+    uint8_t LOS_STKY;
 };
+
+struct si5351_ctx_t {
+    i2c_inst_t *bus;
+    uint baudrate;
+    uint sda;
+    uint scl;
+};
+
+typedef struct si5351_ctx_t si5351_ctx;
+
+void si5351_configure(i2c_inst_t *i2c, uint baudrate, uint sda, uint scl);
 
 // Si5351(uint8_t i2c_addr = SI5351_BUS_BASE_ADDR);
 bool si5351_init(uint8_t, uint8_t, uint32_t, int32_t);
+
 void si5351_reset(void);
-uint8_t si5351_set_freq(uint64_t, enum si5351_clock);
-uint8_t set_freq_manual(uint64_t, uint64_t, enum si5351_clock);
-void set_pll(uint64_t, enum si5351_pll);
-void set_ms(enum si5351_clock, struct Si5351RegSet, uint8_t, uint8_t, uint8_t);
-void si5351_output_enable(enum si5351_clock, uint8_t);
-void si5351_drive_strength(enum si5351_clock, enum si5351_drive);
+
+uint8_t si5351_set_freq(uint64_t, enum Clock);
+
+uint8_t set_freq_manual(uint64_t, uint64_t, enum Clock);
+
+void set_pll(uint64_t, enum PLL);
+
+void set_ms(enum Clock, struct Si5351RegSet, uint8_t, uint8_t, uint8_t);
+
+void si5351_output_enable(enum Clock, uint8_t);
+
+void si5351_drive_strength(enum Clock, enum Drive);
+
 void update_status(void);
-void set_correction(int32_t, enum si5351_pll_input);
-void set_phase(enum si5351_clock, uint8_t);
-int32_t get_correction(enum si5351_pll_input);
-void pll_reset(enum si5351_pll);
-void set_ms_source(enum si5351_clock, enum si5351_pll);
-void set_int(enum si5351_clock, uint8_t);
-void si5351_set_clock_pwr(enum si5351_clock, uint8_t);
-void set_clock_invert(enum si5351_clock, uint8_t);
-void set_clock_source(enum si5351_clock, enum si5351_clock_source);
-void set_clock_disable(enum si5351_clock, enum si5351_clock_disable);
-void set_clock_fanout(enum si5351_clock_fanout, uint8_t);
-void set_pll_input(enum si5351_pll, enum si5351_pll_input);
+
+void set_correction(int32_t, enum PLLInput);
+
+void set_phase(enum Clock, uint8_t);
+
+int32_t get_correction(enum PLLInput);
+
+void pll_reset(enum PLL);
+
+void set_ms_source(enum Clock, enum PLL);
+
+void set_int(enum Clock, uint8_t);
+
+void si5351_set_clock_pwr(enum Clock, uint8_t);
+
+void set_clock_invert(enum Clock, uint8_t);
+
+void set_clock_source(enum Clock, enum ClockSource);
+
+void set_clock_disable(enum Clock, enum ClockDisable);
+
+void set_clock_fanout(enum ClockFanout, uint8_t);
+
+void set_pll_input(enum PLL, enum PLLInput);
+
 void set_vcxo(uint64_t, uint8_t);
-void set_ref_freq(uint32_t, enum si5351_pll_input);
+
+void set_ref_freq(uint32_t, enum PLLInput);
+
 uint8_t si5351_write_bulk(uint8_t, uint8_t, uint8_t *);
+
 uint8_t si5351_write(uint8_t, uint8_t);
+
 uint8_t si5351_read(uint8_t);
 
 #endif /* SI5351_H_ */

@@ -20,6 +20,8 @@ typedef enum oscillator_clk_t oscillator_clk;
 
 void oscillator_init();
 
+void oscillator_start();
+
 uint64_t oscillator_get_frequency(oscillator_clk clk);
 
 void oscillator_set_frequency(oscillator_clk clk, uint64_t frequency);

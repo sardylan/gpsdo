@@ -29,7 +29,11 @@ void init() {
     led_init();
     gps_init();
     counter_init();
-    // oscillator_init();
+    oscillator_init();
+
+    sleep_ms(500);
+
+    oscillator_start();
 }
 
 void program_core0() {

@@ -86,4 +86,5 @@ void counter_event_reset(const counter_event event) {
 
 void counter_overflow() {
     overflow_counter += 1;
+    pwm_clear_irq(counter_pwm_slice);
 }

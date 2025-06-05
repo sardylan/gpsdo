@@ -4,5 +4,5 @@ add_library(si5351
 target_link_libraries(si5351
         pico_stdlib
         hardware_gpio
-        hardware_irq
-        hardware_i2c)
+        hardware_i2c
+        hardware_irq)
