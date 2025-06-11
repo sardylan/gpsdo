@@ -3,6 +3,10 @@
 
 #include "pico/types.h"
 
+#define TIMERTC_CLOCK_SYNC_TIMEOUT 60000000
+
+#define timertc_clock_sync_check() (now - timertc_last_set_time >= TIMERTC_CLOCK_SYNC_TIMEOUT)
+
 void timertc_init();
 
 void timertc_check();
