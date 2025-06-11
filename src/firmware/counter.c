@@ -10,8 +10,9 @@
 volatile bool counter_event_pps;
 
 unsigned int counter_pwm_slice;
-volatile uint64_t overflow_counter;
-volatile uint64_t counter_value;
+volatile uint16_t pwm_counter_value;
+volatile uint32_t overflow_counter;
+volatile uint32_t counter_value;
 
 void counter_init() {
     log_counter(info, "Initializing");
@@ -48,7 +49,7 @@ void counter_init() {
     irq_set_priority(GPIO_IRQ_EDGE_RISE, 1);
 }
 
-uint64_t counter_get_value() {
+uint32_t counter_get_value() {
     return counter_value;
 }
 
@@ -59,7 +60,10 @@ void counter_pps_irq_handler(uint gpio, uint32_t events) {
     // if (!(events & GPIO_IRQ_EDGE_RISE))
     //     return;
 
-    counter_value = (overflow_counter << 16) + pwm_get_counter(counter_pwm_slice);
+    const uint16_t old_counter = pwm_counter_value;
+    pwm_counter_value = pwm_get_counter(counter_pwm_slice);
+    counter_value = (overflow_counter << 16) + pwm_counter_value - old_counter;
+
     overflow_counter = 0;
 
     counter_event_pps = true;
@@ -85,6 +89,6 @@ void counter_event_reset(const counter_event event) {
 }
 
 void counter_overflow() {
-    overflow_counter += 1;
     pwm_clear_irq(counter_pwm_slice);
+    overflow_counter += 1;
 }

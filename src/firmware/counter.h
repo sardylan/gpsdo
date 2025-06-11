@@ -18,7 +18,7 @@ typedef enum counter_event_t counter_event;
 
 void counter_init();
 
-uint64_t counter_get_value();
+uint32_t counter_get_value();
 
 void counter_pps_irq_handler(uint gpio, uint32_t events);
 
