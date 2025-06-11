@@ -76,7 +76,7 @@ void job_core1() {
         gps_event_reset(GPS_EVENT_NMEA);
 
         const char *sentence = gps_tail_get();
-        log_text("GPS: %s", sentence);
+        // log_text("GPS: %s", sentence);
         gps_sentence_parse(sentence);
 
         gps_tail_forward();
