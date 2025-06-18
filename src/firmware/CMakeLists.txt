@@ -7,11 +7,13 @@ add_executable(gpsdo
         buildflags.h.in
         config.h
         counter.h counter.c
+        display.h display.c
         gps.h gps.c
         led.h led.c
         log.h log.c
         main.h main.c
         oscillator.h oscillator.c
+        scheduler.h
         timertc.h timertc.c
         ui.h ui.c
         version.h.in)
@@ -31,7 +33,8 @@ target_link_libraries(gpsdo
         hardware_i2c
         hardware_pio
         hardware_dma
-        si5351)
+        si5351
+        lcd)
 
 pico_enable_stdio_usb(gpsdo 1)
 

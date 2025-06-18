@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef GPSDO__FIRMWARE__CONFIG__H
+#define GPSDO__FIRMWARE__CONFIG__H
 
 #include <pico/stdlib.h>
 
@@ -36,15 +36,22 @@
 #define OSCILLATOR_I2C_ADDRESS                      0x60
 #define OSCILLATOR_I2C_XTAL_FREQUENCY               25000000
 #define OSCILLATOR_I2C_XTAL_FREQUENCY_CORRECTION    0
-#define OSCILLATOR_FREQUENCY_CLK0                   40000000ULL
-#define OSCILLATOR_FREQUENCY_CLK1                   25000000ULL
-#define OSCILLATOR_FREQUENCY_CLK2                   10000000ULL
+#define OSCILLATOR_FREQUENCY_CLK0                   40000000
+#define OSCILLATOR_FREQUENCY_CLK1                   25000000
+#define OSCILLATOR_FREQUENCY_CLK2                   10000000
 
 #define LED_PIN_GPS_DATA                            6
 #define LED_PIN_GPS_FIX                             7
 #define LED_PIN_GPS_PPS                             8
 #define LED_PIN_CLOCK_SYNC                          9
 
-#define REFERENCE_CLOCK_FREQUENCY   OSCILLATOR_FREQUENCY_CLK2
+#define LCD_PIN_RS                                  14
+#define LCD_PIN_ENABLE                              15
+#define LCD_PIN_DATA_4                              21
+#define LCD_PIN_DATA_5                              20
+#define LCD_PIN_DATA_6                              19
+#define LCD_PIN_DATA_7                              18
+
+#define REFERENCE_CLOCK_FREQUENCY                   OSCILLATOR_FREQUENCY_CLK2
 
 #endif

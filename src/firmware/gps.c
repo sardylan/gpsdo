@@ -3,13 +3,13 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hardware/rtc.h>
+#include <pico/mutex.h>
 
 #include "log.h"
 // #include "counter.h"
 #include "led.h"
 #include "timertc.h"
-#include "hardware/rtc.h"
-#include "pico/critical_section.h"
 
 char gps_buffer[GPS_CHUNKS][GPS_CHUNK_SIZE];
 volatile bool gps_in_sentence;
@@ -27,13 +27,13 @@ float hdop;
 float altitude;
 float geoid_separation;
 
-critical_section_t gps_cs;
+mutex_t gps_mutex;
 
 void gps_init() {
     log_info("Initialization");
 
-    log_gps(debug, "Initializing critical section");
-    critical_section_init(&gps_cs);
+    log_gps(debug, "Initializing mutex");
+    mutex_init(&gps_mutex);
 
     log_gps(debug, "Resetting buffers");
     memset(gps_buffer, '\0', sizeof(gps_buffer));
@@ -67,14 +67,14 @@ void gps_init() {
 }
 
 const char *gps_head_get() {
-    critical_section_enter_blocking(&gps_cs);
+    mutex_enter_blocking(&gps_mutex);
     const char *string = gps_buffer[gps_buffer_head];
-    critical_section_exit(&gps_cs);
+    mutex_exit(&gps_mutex);
     return string;
 }
 
 void gps_head_put(const char c) {
-    critical_section_enter_blocking(&gps_cs);
+    mutex_enter_blocking(&gps_mutex);
 
     gps_buffer[gps_buffer_head][gps_buffer_head_pos] = c;
     gps_buffer_head_pos += 1;
@@ -83,11 +83,11 @@ void gps_head_put(const char c) {
         memset(gps_buffer[gps_buffer_head], '\0', GPS_CHUNK_SIZE);
     }
 
-    critical_section_exit(&gps_cs);
+    mutex_exit(&gps_mutex);
 }
 
 void gps_head_forward() {
-    critical_section_enter_blocking(&gps_cs);
+    mutex_enter_blocking(&gps_mutex);
 
     gps_buffer_head += 1;
     if (gps_buffer_head >= GPS_CHUNKS)
@@ -95,25 +95,25 @@ void gps_head_forward() {
 
     gps_buffer_head_pos = 0;
 
-    critical_section_exit(&gps_cs);
+    mutex_exit(&gps_mutex);
 }
 
 const char *gps_tail_get() {
-    critical_section_enter_blocking(&gps_cs);
+    mutex_enter_blocking(&gps_mutex);
     const char *string = gps_buffer[gps_buffer_tail];
-    critical_section_exit(&gps_cs);
+    mutex_exit(&gps_mutex);
     return string;
 }
 
 void gps_tail_forward() {
-    critical_section_enter_blocking(&gps_cs);
+    mutex_enter_blocking(&gps_mutex);
 
     memset(gps_buffer[gps_buffer_tail], '\0', GPS_CHUNK_SIZE);
     gps_buffer_tail += 1;
     if (gps_buffer_tail >= GPS_CHUNKS)
         gps_buffer_tail = 0;
 
-    critical_section_exit(&gps_cs);
+    mutex_exit(&gps_mutex);
 }
 
 bool gps_event_get(const gps_event event) {
@@ -394,8 +394,16 @@ void gps_sentence_parse(const char *s) {
         log_gps(trace, "RMC (Valid: %s - Time: %04d-%02d-%02d %02d:%02d:%02d)",
                 valid ? "YES" : "NO", dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
 
-        if (valid)
+        if (valid) {
+            log_gps(debug, "Setting RTC clock to %04d-%02d-%02d %02d:%02d:%02d",
+                    dt.year, dt.month, dt.day, dt.hour, dt.min, dt.sec);
             timertc_set_time(&dt);
+
+            datetime_t new_dt;
+            timertc_get_time(&new_dt);
+            log_gps(debug, "RTC read: %04d-%02d-%02d %02d:%02d:%02d",
+                    new_dt.year, new_dt.month, new_dt.day, new_dt.hour, new_dt.min, new_dt.sec);
+        }
     }
 }
 

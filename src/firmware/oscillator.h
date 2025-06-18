@@ -22,13 +22,13 @@ void oscillator_init();
 
 void oscillator_start();
 
-uint64_t oscillator_get_frequency(oscillator_clk clk);
+uint32_t oscillator_get_frequency(oscillator_clk clk);
 
-void oscillator_set_frequency(oscillator_clk clk, uint64_t frequency);
+void oscillator_set_frequency(oscillator_clk clk, uint32_t frequency);
 
-int64_t oscillator_get_shift(oscillator_clk clk);
+int32_t oscillator_get_shift();
 
-void oscillator_set_shift(int64_t shift);
+void oscillator_set_shift(int32_t shift);
 
 void oscillator_recompute_ratio();
 

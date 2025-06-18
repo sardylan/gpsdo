@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <pico/critical_section.h>
+#include <pico/mutex.h>
 
 #include <hardware/rtc.h>
 #include <hardware/gpio.h>
@@ -11,10 +11,10 @@
 
 #include "timertc.h"
 
-critical_section_t log_cs;
+mutex_t log_cs;
 
 void log_init() {
-    critical_section_init(&log_cs);
+    mutex_init(&log_cs);
 
     uart_init(LOG_UART, LOG_UART_SPEED);
     gpio_set_function(LOG_UART_PIN_TX, UART_FUNCSEL_NUM(LOG_UART, LOG_UART_PIN_TX));
@@ -54,7 +54,7 @@ void log_message_impl(const char *file, const size_t line, const char *level, co
     snprintf(buffer, sizeof(buffer), "%s (%s) [%s] {%s:%u}: %s\n\r",
              datetime, mcu_us, level, file, line, message);
 
-    critical_section_enter_blocking(&log_cs);
+    mutex_enter_blocking(&log_cs);
     log_string(buffer);
-    critical_section_exit(&log_cs);
+    mutex_exit(&log_cs);
 }

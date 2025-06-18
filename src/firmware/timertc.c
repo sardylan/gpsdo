@@ -8,14 +8,11 @@
 
 mutex_t timertc_mutex;
 volatile uint64_t timertc_last_set_time;
-volatile bool timertc_already_sync;
 
 void timertc_init() {
     mutex_init(&timertc_mutex);
 
     rtc_init();
-
-    timertc_already_sync = false;
 
     timertc_last_set_time = 0;
 }
@@ -43,12 +40,12 @@ void timertc_set_time(const datetime_t *dt) {
     mutex_enter_blocking(&timertc_mutex);
 
     const uint64_t now = time_us_64();
-    if (!timertc_already_sync || timertc_clock_sync_check()) {
-        timertc_already_sync = true;
-        timertc_last_set_time = now;
-        rtc_set_datetime(dt);
-        led_set_state(LED_CLOCK_SYNC, true);
-    }
+    timertc_last_set_time = now;
+
+    rtc_set_datetime(dt);
+    sleep_ms(100);
+
+    led_set_state(LED_CLOCK_SYNC, true);
 
     mutex_exit(&timertc_mutex);
 }
