@@ -45,6 +45,7 @@ void init() {
     oscillator_start();
 
     scheduler_init(oscillator_correction);
+    scheduler_init(display_update);
 }
 
 void program_core0() {
@@ -72,7 +73,7 @@ void job_core1() {
         display_frequency(clock_current);
 
         clock_delta = REFERENCE_CLOCK_FREQUENCY - (int32_t) clock_current;
-        log_text("CLOCK: current: %u - delta: %d", clock_current, clock_delta);
+        log_text("CLOCK: clock_current: %u - clock_delta: %d", clock_current, clock_delta);
 
         led_blink(LED_GPS_PPS);
     }
@@ -119,15 +120,28 @@ scheduler_task_header(oscillator_correction) {
     // shift_increment = shift >= 0 ? 1 : -1;
     // }
 
-    int32_t shift_increment = clock_delta / 10;
-    if (shift_increment > 10) {
-        shift_increment = 10;
-    } else if (shift_increment < -10) {
-        shift_increment = -10;
+    int32_t shift_increment = 0;
+
+    const int32_t i = clock_delta / 10;
+    if (clock_delta < 10 && clock_delta > -10 && (clock_delta > 2 || clock_delta < -2)) {
+        shift_increment = clock_delta > 0 ? 1 : -1;
+    } else {
+        shift_increment = i;
+        if (shift_increment > 10) {
+            shift_increment = 10;
+        } else if (shift_increment < -10) {
+            shift_increment = -10;
+        }
+    }
+    clock_delta -= shift_increment;
+
+    if (shift_increment == 0) {
+        log_text("CLOCK: within tolerance, skipping correction");
+        return;
     }
 
     const int32_t shift_new = oscillator_get_shift() + shift_increment;
-    log_text("CLOCK: new shift: %d", shift_new);
+    log_text("CLOCK: shift_new: %d", shift_new);
     oscillator_set_shift(shift_new);
 }
 

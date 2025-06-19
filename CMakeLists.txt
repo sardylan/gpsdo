@@ -8,7 +8,7 @@ pico_sdk_init()
 
 set(APPLICATION_NAME "GPS Dominated Oscillator for RaspberryPi Pico (RP2040)")
 set(APPLICATION_VERSION_MAJOR "0")
-set(APPLICATION_VERSION_MINOR "5")
+set(APPLICATION_VERSION_MINOR "9")
 set(APPLICATION_VERSION_PATCH "0")
 
 set(ORGANIZATION_NAME "The HellNet.org")

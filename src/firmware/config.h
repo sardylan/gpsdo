@@ -53,5 +53,6 @@
 #define LCD_PIN_DATA_7                              18
 
 #define REFERENCE_CLOCK_FREQUENCY                   OSCILLATOR_FREQUENCY_CLK2
+#define REFERENCE_CLOCK_DRIFT_PARAMETER             4
 
 #endif
