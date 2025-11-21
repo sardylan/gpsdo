@@ -4,7 +4,7 @@
 
 #include "pico/time.h"
 
-bool lcd_context_init(lcd_context *ctx,
+bool lcd_context_init(lcd_context_t *ctx,
                       const uint pin_rs,
                       const uint pin_enable,
                       const uint pin_d4,

@@ -7,7 +7,7 @@
 #include "config.h"
 #include "lcd/text.h"
 
-lcd_context ctx;
+lcd_context_t ctx;
 
 void display_init() {
     lcd_context_init(&ctx, LCD_PIN_RS, LCD_PIN_ENABLE, LCD_PIN_DATA_4, LCD_PIN_DATA_5, LCD_PIN_DATA_6, LCD_PIN_DATA_7);

@@ -13,7 +13,6 @@ add_executable(gpsdo
         log.h log.c
         main.h main.c
         oscillator.h oscillator.c
-        scheduler.h
         timertc.h timertc.c
         ui.h ui.c
         version.h.in)
@@ -34,7 +33,9 @@ target_link_libraries(gpsdo
         hardware_pio
         hardware_dma
         si5351
-        lcd)
+        lcd
+        pid
+        scheduler)
 
 pico_enable_stdio_usb(gpsdo 1)
 

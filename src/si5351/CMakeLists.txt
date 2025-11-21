@@ -6,3 +6,6 @@ target_link_libraries(si5351
         hardware_gpio
         hardware_i2c
         hardware_irq)
+
+target_include_directories(si5351
+        PUBLIC ${CMAKE_CURRENT_LIST_DIR})

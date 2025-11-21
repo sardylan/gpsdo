@@ -3,7 +3,7 @@
 #include "comm.h"
 #include "pico/time.h"
 
-bool lcd_text_clear(const lcd_context *ctx) {
+bool lcd_text_clear(const lcd_context_t *ctx) {
     if (ctx == nullptr)
         return false;
 
@@ -17,7 +17,7 @@ bool lcd_text_clear(const lcd_context *ctx) {
     return true;
 }
 
-bool lcd_text_line(const lcd_context *ctx, const uint8_t line, const char *text) {
+bool lcd_text_line(const lcd_context_t *ctx, const uint8_t line, const char *text) {
     if (ctx == nullptr || !text)
         return false;
 

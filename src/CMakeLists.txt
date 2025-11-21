@@ -5,4 +5,6 @@ configure_file(buildprop.h.in buildprop.h)
 
 add_subdirectory(si5351)
 add_subdirectory(lcd)
+add_subdirectory(pid)
+add_subdirectory(scheduler)
 add_subdirectory(firmware)

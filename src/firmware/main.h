@@ -13,8 +13,8 @@ void job_core0();
 
 void job_core1();
 
-scheduler_task_header(oscillator_correction);
+void task_oscillator_correction();
 
-scheduler_task_header(display_update);
+void task_display_update();
 
 #endif

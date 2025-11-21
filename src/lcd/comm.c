@@ -4,7 +4,7 @@
 
 #include "pico/time.h"
 
-bool lcd_comm_reset(const lcd_context *ctx) {
+bool lcd_comm_reset(const lcd_context_t *ctx) {
     if (ctx == nullptr)
         return false;
 
@@ -31,7 +31,7 @@ bool lcd_comm_reset(const lcd_context *ctx) {
     return true;
 }
 
-bool lcd_comm_send_byte(const lcd_context *ctx, const uint8_t byte) {
+bool lcd_comm_send_byte(const lcd_context_t *ctx, const uint8_t byte) {
     if (ctx == nullptr)
         return false;
 
@@ -58,7 +58,7 @@ bool lcd_comm_send_byte(const lcd_context *ctx, const uint8_t byte) {
     return true;
 }
 
-bool lcd_comm_send_command(const lcd_context *ctx, const uint8_t command) {
+bool lcd_comm_send_command(const lcd_context_t *ctx, const uint8_t command) {
     if (ctx == nullptr)
         return false;
 
@@ -66,7 +66,7 @@ bool lcd_comm_send_command(const lcd_context *ctx, const uint8_t command) {
     return lcd_comm_send_byte(ctx, command);
 }
 
-bool lcd_comm_send_data(const lcd_context *ctx, const uint8_t command) {
+bool lcd_comm_send_data(const lcd_context_t *ctx, const uint8_t command) {
     if (ctx == nullptr)
         return false;
 

@@ -10,14 +10,15 @@
 #include "ui.h"
 #include "counter.h"
 #include "oscillator.h"
-#include "scheduler.h"
 #include "display.h"
 
-scheduler_declare(oscillator_correction);
-scheduler_declare(display_update);
+#include <scheduler/scheduler.h>
+
 
 uint32_t clock_current;
 int32_t clock_delta;
+
+scheduler_ctx_t scheduler_context;
 
 int main() {
     init();
@@ -44,8 +45,9 @@ void init() {
 
     oscillator_start();
 
-    scheduler_init(oscillator_correction);
-    scheduler_init(display_update);
+    scheduler_init(&scheduler_context);
+    scheduler_add_task(&scheduler_context, "oscillator_correction", 250 * 1000, task_oscillator_correction);
+    scheduler_add_task(&scheduler_context, "display_update", 1 * 1000 * 1000, task_display_update);
 }
 
 void program_core0() {
@@ -89,15 +91,12 @@ void job_core1() {
         led_blink(LED_GPS_DATA);
     }
 
-    scheduler_now();
-
-    scheduler_task_ms(oscillator_correction, 250);
-    scheduler_task_s(display_update, 1);
+    scheduler_run(&scheduler_context);
 
     led_blink_check();
 }
 
-scheduler_task_header(oscillator_correction) {
+void task_oscillator_correction() {
     if (clock_delta == 0) {
         log_text("CLOCK: no correction needed");
         return;
@@ -145,7 +144,7 @@ scheduler_task_header(oscillator_correction) {
     oscillator_set_shift(shift_new);
 }
 
-scheduler_task_header(display_update) {
+void task_display_update() {
     display_frequency(clock_current);
     display_shift(oscillator_get_shift());
 }
