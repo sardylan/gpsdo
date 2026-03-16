@@ -1,6 +1,5 @@
 add_library(pid
-        pid.h pid.c
-        context.h context.c)
+        pid.hpp pid.tpp)
 
 target_link_libraries(pid
         pico_stdlib)

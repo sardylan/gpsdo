@@ -1,8 +1,6 @@
 add_library(scheduler
-        scheduler.c
-        scheduler.h
-        context.h
-        types.h)
+        scheduler.hpp scheduler.cpp
+        task.hpp task.cpp)
 
 target_link_libraries(scheduler
         pico_stdlib)
